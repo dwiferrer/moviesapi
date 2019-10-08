@@ -15,44 +15,94 @@ const movieRouter = express.Router();
 //   })
 // });
 
-// //GET MOVIES
-// movieRouter.get("/movies", async(req,res,next) => {
-//     try {
-//       const movie = await movies.db
-//       .collection("movieDetails")
-//       .find({ actors: "Chris Pine"})
-//       .toArray()
-//       res.json(movie)
-//     } catch (err){
-//         console.log(err)
-//     } 
-//   });
+// //MOVIE WITH CORRECT LINK (SYNC)
+// movieRouter.get("/movies1", (req, res, next) => {
+//   const size = 10; // results per page
+//   const page = req.query.page // Page 
+//   mongoose.connection.db
+//   .collection("movieDetails")
+//   .find({})
+//   .sort({ year: -1 })
+//   .skip((size * page) - size)
+//   .limit(size)
+//   .toArray()
+//   .then((movies) => {
+//   var newArray = new Array()
+//   movies.forEach((arrayItem) => {
+//       var poster = arrayItem.poster
+//       var posterLink = poster.split("/")
+//       var image = ("https://" + posterLink[2] + '/' + posterLink[3]+ '/' + posterLink[4] + '/' + posterLink[5])
+//       var image = image
+//       var movieDetails = {
+//          title: arrayItem.title,
+//          poster: image
+//       }
+//       newArray.push(movieDetails)
+//     })
+//     res.json(newArray);
+// }, (err) => next(err))
+// .catch((err) => next(err)); 
+// });
+
+//GET MOVIES with proper link
+movieRouter.get("/movies", async(req,res,next) => {
+  try {
+    var page = parseInt(req.query.page)
+    var size = parseInt(req.query.size)
+
+    const movie =  await movies.db
+     .collection("movieDetails")
+     //.find({}, { projection: { _id: 0, title:1, year: 1, poster: 1 }})
+     .find({})
+     .sort( { year: -1 } ) 
+     .skip((page * size) - size)
+     .limit(size)
+     .toArray();
+
+    movie.forEach((item) => {
+      if (item.poster!=null)
+        item.poster = item.poster.replace("http", "https")
+    })
+    res.json(movie);
+  } catch (err){
+    console.log(err)
+  }     
+});
 
 // HOME
-movieRouter.get("/home", async(req,res,next) => {
-  try {
-    var currentDate = new Date()
-    var currentYear = currentDate.getFullYear() -1
-    //TO EDIT
-    console.log(currentYear)
-    const movie = await movies.db
-    .collection("movieDetails")
-    .find({ year: currentYear }, 
-    { projection: { _id: 0, title:1, plot: 1, poster: 1 }})
-    .toArray()
-    res.json(movie)
-  } catch (err){
-      console.log(err)
-  } 
-}); 
+movieRouter.get("/home", async(req,res,next) => { 
+try {
+  var page = parseInt(req.query.page)
+  var size = parseInt(req.query.size)
+  const movie =  await movies.db
+   .collection("movieDetails")
+   //.find({}, { projection: { _id: 0, title:1, year: 1, poster: 1 }})
+   .find({})
+   .sort( { "tomato.rating": -1 } ) 
+   .skip((page * size) - size)
+   .limit(size)
+   .toArray();
+
+  movie.forEach((item) => {
+    if (item.poster!=null)
+      item.poster = item.poster.replace("http", "https")
+  })
+  res.json(movie);
+} catch (err){
+  console.log(err)
+}     
+});
 
 // GET MOVIE ID
 movieRouter.get("/movies/:id", async(req,res,next) => {
     try {
       const movie = await movies.db
       .collection("movieDetails")
-      .findOne({ _id: new ObjectId(req.params.id) }, 
-      { projection: { _id: 0, title:1, plot: 1, poster: 1 }})
+      .findOne({ _id: new ObjectId(req.params.id) }) 
+      //{ projection: { _id: 0, title:1, plot: 1, poster: 1 }})     
+      if (movie.poster != null){
+        movie.poster = movie.poster.replace("http", "https")
+      }
       res.json(movie)
     } catch (err){
         console.log(err)
@@ -91,7 +141,7 @@ movieRouter.get("/writers", async(req,res,next) => {
       console.log(req.query.name)
       const movie = await movies.db
       .collection("movieDetails")
-      .find({ writers: req.query.name }, 
+      .find({ writers: new RegExp(req.query.name, "i") }, 
       { projection: { _id: 0, title:1, writers: 1 }})
       .toArray()
       res.json(movie)
@@ -106,6 +156,9 @@ movieRouter.get("/writers", async(req,res,next) => {
       const movie = await movies.db
       .collection("movieDetails")
       .findOne({ _id: new ObjectId(req.params.id) })
+      if (movie.poster != null){
+        movie.poster = movie.poster.replace("http", "https")
+      }
       res.json(movie)
     } catch (err){
         console.log(err)
@@ -130,30 +183,24 @@ movieRouter.get("/writers", async(req,res,next) => {
 
 //SEARCH
 movieRouter.get("/search", async(req, res, next) => {
-  // if (req.query.title && req.query.actors && req.query.plot ){
-  //   try {
-  //     console.log(req.query.title)
-  //     console.log(req.query.actors)
-  //     console.log(req.query.plot)
-  //     const movie = await movies.db
-  //     .collection("movieDetails")
-  //     .find({ title: new RegExp(req.query.title, "g") },
-  //     // { actors: new RegExp(req.query.actors, "g") },
-  //     // { plot: new RegExp(req.query.plot, "g") }, 
-  //     { projection: { _id: 0, title:1, plot: 1 }})
-  //     .toArray()
-  //     res.json(movie)
-  //   } catch(err){
-  //     console.log(err)
-  //   }  
-  // } 
-  // else 
-  if (req.query.title){
+  if (req.query.all) {
+    try {
+      console.log(req.query.all)
+      const movie = await movies.db
+      .collection("movieDetails")
+      .find({})
+      .toArray()
+      res.json(movie)
+    } catch(err){
+      console.log(err)
+    }  
+  } 
+  else if (req.query.title){
     try {
       console.log(req.query.title)
       const movie = await movies.db
       .collection("movieDetails")
-      .find({ title: new RegExp(req.query.title, "g") }, 
+      .find({ title: new RegExp(req.query.title, "i") }, 
       { projection: { _id: 0, title:1, plot: 1 }})
       .toArray()
       res.json(movie)
@@ -166,8 +213,8 @@ movieRouter.get("/search", async(req, res, next) => {
       console.log(req.query.actors)
       const movie = await movies.db
       .collection("movieDetails")
-      .find({ actors: new RegExp(req.query.actors, "g") }, 
-      { projection: { _id: 0, title:1, plot: 1 }})
+      .find({ actors: new RegExp(req.query.actors, "i") }, 
+      { projection: { _id: 0, title:1, actors: 1 }})
       .toArray()
       res.json(movie)
     } catch(err){
@@ -179,9 +226,9 @@ movieRouter.get("/search", async(req, res, next) => {
       console.log(req.query.plot)
       const movie = await movies.db
       .collection("movieDetails")
-      .find({ plot: new RegExp(req.query.plot, "g") }, 
+      .find({ plot: new RegExp(req.query.plot, "i") }, 
       { projection: { _id: 0, title:1, plot: 1 }})
-      .toArray()
+      .toArray();
       res.json(movie)
     } catch(err){
       console.log(err)
@@ -202,21 +249,5 @@ movieRouter.get("/search", async(req, res, next) => {
 //         console.log(err)
 //     } 
 //   });
-
-
-
-
-// movieRouter.get("/writers", async(req,res,next) => {
-//     try {
-//       console.log(req.query.xxx)
-//       const movie = await movies.db
-//       .collection("movieDetails")
-//       .find({ writers: req.query.xxx }, 
-//       { projection: { _id: 0, title:1, writers: 1 }})
-//       res.json(movie)
-//     } catch (err){
-//         console.log(err)
-//     } 
-//   }); 
 
 module.exports = movieRouter; 
