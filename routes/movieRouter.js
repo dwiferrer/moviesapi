@@ -2,9 +2,10 @@ const express = require("express");
 const mongoose = require("mongoose");
 const ObjectId = require("mongodb").ObjectId;
 const { connection: movies } = mongoose;
+const cors = require("./cors");
 const movieRouter = express.Router();
 
-// //SYNC
+// // (SYNC)
 // app.use("/actors", (req, res) => {
 //   movies.db
 //   .collection("movieDetails")
@@ -54,14 +55,14 @@ movieRouter.get("/movies", async(req,res,next) => {
      .collection("movieDetails")
      //.find({}, { projection: { _id: 0, title:1, year: 1, poster: 1 }})
      .find({})
-     .sort( { year: -1 } ) 
+     .sort( { title: 1 } ) 
      .skip((page * size) - size)
      .limit(size)
      .toArray();
 
     movie.forEach((item) => {
       if (item.poster!=null)
-        item.poster = item.poster.replace("http", "https")
+        item.poster = item.poster.replace("http://ia.media-imdb.com", "https://m.media-amazon.com")
     })
     res.json(movie);
   } catch (err){
@@ -70,27 +71,49 @@ movieRouter.get("/movies", async(req,res,next) => {
 });
 
 // HOME
-movieRouter.get("/home", async(req,res,next) => { 
-try {
-  var page = parseInt(req.query.page)
-  var size = parseInt(req.query.size)
-  const movie =  await movies.db
-   .collection("movieDetails")
-   //.find({}, { projection: { _id: 0, title:1, year: 1, poster: 1 }})
-   .find({})
-   .sort( { "tomato.rating": -1 } ) 
-   .skip((page * size) - size)
-   .limit(size)
-   .toArray();
+movieRouter.get("/home", cors.cors, async(req,res,next) => {
+  if (req.query.size!=null){
+    try {
+      var page = parseInt(req.query.page)
+      var size = parseInt(req.query.size)
+      const movie =  await movies.db
+      .collection("movieDetails")
+      //.find({}, { projection: { _id: 0, title:1, year: 1, poster: 1 }})
+      .find({})
+      .sort( { "tomato.rating": -1 } ) 
+      .skip((page * size) - size)
+      .limit(size)
+      .toArray();
 
-  movie.forEach((item) => {
-    if (item.poster!=null)
-      item.poster = item.poster.replace("http", "https")
-  })
-  res.json(movie);
-} catch (err){
-  console.log(err)
-}     
+      movie.forEach((item) => {
+        if (item.poster!=null)
+          item.poster = item.poster.replace("http://ia.media-imdb.com", "https://m.media-amazon.com")
+        })
+
+      const moviecount = await movies.db
+      .collection("movieDetails")
+      .find({})
+      .count()
+
+      res.json({movie: movie,
+        count: moviecount})
+      //res.json(movie)  
+    } catch (err){
+      console.log(err)
+    }
+  } else {
+    try {
+      const moviecount = await movies.db
+      .collection("movieDetails")
+      .find({})
+      .count()
+
+      res.json({count: moviecount})  
+    } catch (err){
+      console.log(err)
+    }     
+
+  }
 });
 
 // GET MOVIE ID
@@ -101,7 +124,7 @@ movieRouter.get("/movies/:id", async(req,res,next) => {
       .findOne({ _id: new ObjectId(req.params.id) }) 
       //{ projection: { _id: 0, title:1, plot: 1, poster: 1 }})     
       if (movie.poster != null){
-        movie.poster = movie.poster.replace("http", "https")
+        movie.poster = movie.poster.replace("http://ia.media-imdb.com", "https://m.media-amazon.com")
       }
       res.json(movie)
     } catch (err){
@@ -151,22 +174,22 @@ movieRouter.get("/writers", async(req,res,next) => {
   });
 
  // UPDATE 
-  movieRouter.get("/update/:id", async(req, res ,next) => {
+movieRouter.get("/update/:id", async(req, res ,next) => {
     try {
       const movie = await movies.db
       .collection("movieDetails")
       .findOne({ _id: new ObjectId(req.params.id) })
       if (movie.poster != null){
-        movie.poster = movie.poster.replace("http", "https")
+        movie.poster = movie.poster.replace("http://ia.media-imdb.com", "https://m.media-amazon.com")
       }
       res.json(movie)
     } catch (err){
         console.log(err)
     } 
   })
-  .post("/update/:id", async(req, res ,next) => {
+.post("/update/:id", async(req, res ,next) => {
     try {
-      console.log(req.body.title)
+      //console.log(req.body.title)
       const movie = await movies.db
       .collection("movieDetails")
       .findOneAndUpdate({ _id: new ObjectId(req.params.id) },
@@ -181,16 +204,28 @@ movieRouter.get("/writers", async(req,res,next) => {
     } 
   });
 
-//SEARCH
-movieRouter.get("/search", async(req, res, next) => {
+// SEARCH
+movieRouter.get("/search", cors.cors, async(req, res, next) => {
+  var page = parseInt(req.query.page)
+  var size = parseInt(req.query.size)
   if (req.query.all) {
     try {
       console.log(req.query.all)
       const movie = await movies.db
       .collection("movieDetails")
-      .find({})
-      .toArray()
-      res.json(movie)
+      .find({ $or: [ {title: new RegExp(req.query.all, "i")}, 
+        {actors: new RegExp(req.query.all, "i")}, 
+        {plot: new RegExp(req.query.all, "i")} ] })
+      .sort( { "year": -1 } ) 
+      .skip((page * size) - size)
+      .limit(size)  
+      .toArray();
+      movie.forEach((item) => {
+        if (item.poster!=null)
+          item.poster = item.poster.replace("http://ia.media-imdb.com", "https://m.media-amazon.com")
+      })
+      //res.json(movie)
+      res.json({movie: movie, count: movie.length})
     } catch(err){
       console.log(err)
     }  
@@ -200,10 +235,17 @@ movieRouter.get("/search", async(req, res, next) => {
       console.log(req.query.title)
       const movie = await movies.db
       .collection("movieDetails")
-      .find({ title: new RegExp(req.query.title, "i") }, 
-      { projection: { _id: 0, title:1, plot: 1 }})
-      .toArray()
-      res.json(movie)
+      .find({ title: new RegExp(req.query.title, "i") })
+      .sort( { "year": -1 } )
+      .skip((page * size) - size)
+      .limit(size)  
+      .toArray();
+      movie.forEach((item) => {
+        if (item.poster!=null)
+          item.poster = item.poster.replace("http://ia.media-imdb.com", "https://m.media-amazon.com")
+      })
+      //res.json(movie)
+      res.json({movie: movie, count: movie.length})
     } catch(err){
       console.log(err)
     }  
@@ -213,10 +255,17 @@ movieRouter.get("/search", async(req, res, next) => {
       console.log(req.query.actors)
       const movie = await movies.db
       .collection("movieDetails")
-      .find({ actors: new RegExp(req.query.actors, "i") }, 
-      { projection: { _id: 0, title:1, actors: 1 }})
-      .toArray()
-      res.json(movie)
+      .find({ actors: new RegExp(req.query.actors, "i") })
+      .sort( { "year": -1 } )
+      .skip((page * size) - size)
+      .limit(size)  
+      .toArray();
+      movie.forEach((item) => {
+        if (item.poster!=null)
+          item.poster = item.poster.replace("http://ia.media-imdb.com", "https://m.media-amazon.com")
+      })
+      //res.json(movie)
+      res.json({movie: movie, count: movie.length})
     } catch(err){
       console.log(err)
     }  
@@ -226,10 +275,17 @@ movieRouter.get("/search", async(req, res, next) => {
       console.log(req.query.plot)
       const movie = await movies.db
       .collection("movieDetails")
-      .find({ plot: new RegExp(req.query.plot, "i") }, 
-      { projection: { _id: 0, title:1, plot: 1 }})
+      .find({ plot: new RegExp(req.query.plot, "i") })
+      .sort( { "year": -1 } )
+      .skip((page * size) - size)
+      .limit(size)  
       .toArray();
-      res.json(movie)
+      movie.forEach((item) => {
+        if (item.poster!=null)
+          item.poster = item.poster.replace("http://ia.media-imdb.com", "https://m.media-amazon.com")
+      })
+      //res.json(movie)
+      res.json({movie: movie, count: movie.length})
     } catch(err){
       console.log(err)
     }  
