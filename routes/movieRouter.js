@@ -5,6 +5,21 @@ const { connection: movies } = mongoose;
 const cors = require("./cors");
 const movieRouter = express.Router();
 
+var jwt = require('express-jwt');
+var jwks = require('jwks-rsa');
+
+var jwtCheck = jwt({
+  secret: jwks.expressJwtSecret({
+      cache: true,
+      rateLimit: true,
+      jwksRequestsPerMinute: 5,
+      jwksUri: 'https://dwightferrer.auth0.com/.well-known/jwks.json'
+}),
+aud: 'https://test/api',
+issuer: 'https://dwightferrer.auth0.com/',
+algorithms: ['RS256']
+});
+
 // // (SYNC)
 // app.use("/actors", (req, res) => {
 //   movies.db
@@ -46,7 +61,7 @@ const movieRouter = express.Router();
 // });
 
 //GET MOVIES with proper link
-movieRouter.get("/movies", async(req,res,next) => {
+movieRouter.get("/movies3", jwtCheck, async(req,res,next) => {
   try {
     var page = parseInt(req.query.page)
     var size = parseInt(req.query.size)
@@ -70,8 +85,47 @@ movieRouter.get("/movies", async(req,res,next) => {
   }     
 });
 
+// //GET MOVIES NOT proper link
+// movieRouter.get("/movies", async(req,res,next) => {
+//   var pageNo = parseInt(req.query.pageNo)
+//   var size = parseInt(req.query.size)
+//   var query = {}
+
+//   if(pageNo < 0 || pageNo === 0) {
+//         response = {"error" : true,"message" : "invalid page number, should start with 1"};
+//         return res.json(response)
+//   }
+//   query.skip = size * (pageNo - 1)
+//   query.limit = size
+  
+//   const movie =  await movies.db
+//     .collection("movieDetails")
+//     .find({}, { projection: { _id: 0, title:1, year: 1, poster: 1 }})
+//     .sort( { year: -1 } ) 
+//     .skip(query.skip)
+//     .limit(query.limit)
+//     .toArray();
+//     //response = {"error" : false,"message" : movie};
+//     res.json(movie);  
+// });
+
+
+// movieRouter.get("/home", async(req,res,next) => { 
+//   console.log(req.query.page)
+//   try {
+//     const moviecount = await movies.db
+//     .collection("movieDetails")
+//     .find({})
+//     .count()
+
+//     res.json({count: moviecount})  
+//   } catch (err){
+//     console.log(err)
+//   }     
+// });
+
 // HOME
-movieRouter.get("/home", cors.cors, async(req,res,next) => {
+movieRouter.get("/home", cors.cors, jwtCheck, async(req,res,next) => {
   if (req.query.size!=null){
     try {
       var page = parseInt(req.query.page)
@@ -117,7 +171,7 @@ movieRouter.get("/home", cors.cors, async(req,res,next) => {
 });
 
 // GET MOVIE ID
-movieRouter.get("/movies/:id", async(req,res,next) => {
+movieRouter.get("/movies/:id", jwtCheck, async(req,res,next) => {
     try {
       const movie = await movies.db
       .collection("movieDetails")
@@ -133,7 +187,7 @@ movieRouter.get("/movies/:id", async(req,res,next) => {
   });
 
 // GET MOVIE ID COUNTRIES
-movieRouter.get("/movies/:id/countries", async(req,res,next) => {
+movieRouter.get("/movies/:id/countries", jwtCheck, async(req,res,next) => {
     try {
       const movie = await movies.db
       .collection("movieDetails")
@@ -146,7 +200,7 @@ movieRouter.get("/movies/:id/countries", async(req,res,next) => {
   }); 
 
 // GET MOVIE ID WRITERS
-movieRouter.get("/movies/:id/writers", async(req,res,next) => {
+movieRouter.get("/movies/:id/writers", jwtCheck, async(req,res,next) => {
     try {
       const movie = await movies.db
       .collection("movieDetails")
@@ -159,7 +213,7 @@ movieRouter.get("/movies/:id/writers", async(req,res,next) => {
   }); 
 
 // GET WRITERS
-movieRouter.get("/writers", async(req,res,next) => {
+movieRouter.get("/writers", jwtCheck, async(req,res,next) => {
     try {
       console.log(req.query.name)
       const movie = await movies.db
@@ -174,7 +228,7 @@ movieRouter.get("/writers", async(req,res,next) => {
   });
 
  // UPDATE 
-movieRouter.get("/update/:id", async(req, res ,next) => {
+movieRouter.get("/update/:id", jwtCheck, async(req, res ,next) => {
     try {
       const movie = await movies.db
       .collection("movieDetails")
@@ -187,17 +241,13 @@ movieRouter.get("/update/:id", async(req, res ,next) => {
         console.log(err)
     } 
   })
-.post("/update/:id", async(req, res ,next) => {
+  .post("/update/:id", jwtCheck, async(req, res ,next) => {
     try {
       //console.log(req.body.title)
       const movie = await movies.db
       .collection("movieDetails")
       .findOneAndUpdate({ _id: new ObjectId(req.params.id) },
-       {$set: {
-        // TO EDIT
-        title: req.body.title, 
-        year: req.body.year
-         }})
+       {$set: req.body})
       res.json({update: "success"})
     } catch (err){
         console.log(err)
@@ -205,7 +255,7 @@ movieRouter.get("/update/:id", async(req, res ,next) => {
   });
 
 // SEARCH
-movieRouter.get("/search", cors.cors, async(req, res, next) => {
+movieRouter.get("/search", cors.cors, jwtCheck, async(req, res, next) => {
   var page = parseInt(req.query.page)
   var size = parseInt(req.query.size)
   if (req.query.all) {
@@ -292,18 +342,17 @@ movieRouter.get("/search", cors.cors, async(req, res, next) => {
   }
 });     
 
-//  //DELETE 
-//   movieRouter.get("/delete/:id", async(req,res,next) => {
-//     try {
-//       const movie = await movies.db
-//       .collection("movieDetails")
-//       .findOneAndRemove({ _id: new ObjectId(req.params.id) })
-//       res.json({
-//         moviedeletion: success
-//       })
-//     } catch (err){
-//         console.log(err)
-//     } 
-//   });
+ //DELETE 
+  movieRouter.post("/delete/:id", jwtCheck, async(req,res,next) => {
+    try {
+      const movie = await movies.db
+      .collection("movieDetails")
+      .findOneAndDelete({ _id: new ObjectId(req.params.id) })
+      res.json({
+        deletion: "success" })
+    } catch (err){
+        console.log(err)
+    } 
+  });
 
 module.exports = movieRouter; 
