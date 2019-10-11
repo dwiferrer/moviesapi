@@ -4,6 +4,7 @@ const ObjectId = require("mongodb").ObjectId;
 const { connection: movies } = mongoose;
 const cors = require("./cors");
 const movieRouter = express.Router();
+const jwtAuthz = require('express-jwt-authz');
 
 var jwt = require('express-jwt');
 var jwks = require('jwks-rsa');
@@ -19,6 +20,23 @@ aud: 'https://test/api',
 issuer: 'https://dwightferrer.auth0.com/',
 algorithms: ['RS256']
 });
+
+
+// //  check scopes
+// const checkScopes = jwtAuthz(['update:movies']);
+
+// movieRouter.get('/api/private', jwtCheck, function(req, res) {
+//   //console.log(user.email);
+//   res.json({
+//     message: 'Hello from a private endpoint! You need to be authenticated to see this.'
+//   });
+// });
+
+// movieRouter.get('/api/scoped', jwtCheck, checkScopes, function(req, res) {
+//   res.json({
+//     message: 'Hello from a private endpoint! You need to be authenticated and have a scope of read:messages to see this.'
+//   });
+// });
 
 // // (SYNC)
 // app.use("/actors", (req, res) => {
@@ -61,7 +79,7 @@ algorithms: ['RS256']
 // });
 
 //GET MOVIES with proper link
-movieRouter.get("/movies3", jwtCheck, async(req,res,next) => {
+movieRouter.get("/movies", cors.cors, jwtCheck, async(req,res,next) => {
   try {
     var page = parseInt(req.query.page)
     var size = parseInt(req.query.size)
@@ -79,14 +97,21 @@ movieRouter.get("/movies3", jwtCheck, async(req,res,next) => {
       if (item.poster!=null)
         item.poster = item.poster.replace("http://ia.media-imdb.com", "https://m.media-amazon.com")
     })
-    res.json(movie);
+
+    const moviecount = await movies.db
+    .collection("movieDetails")
+    .find({})
+    .count()
+
+    // res.json(movie);
+    res.json({movie: movie, count: moviecount})
   } catch (err){
     console.log(err)
-  }     
+  }   
 });
 
 // //GET MOVIES NOT proper link
-// movieRouter.get("/movies", async(req,res,next) => {
+// movieRouter.get("/movies2, async(req,res,next) => {
 //   var pageNo = parseInt(req.query.pageNo)
 //   var size = parseInt(req.query.size)
 //   var query = {}
