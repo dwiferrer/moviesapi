@@ -22,7 +22,7 @@ algorithms: ['RS256']
 });
 
 //GET MOVIES with proper link
-movieRouter.get("/movies", jwtCheck, async(req,res,next) => {
+movieRouter.get("/movies", cors.cors, jwtCheck, async(req,res,next) => {
   var page = parseInt(req.query.page)
   var size = parseInt(req.query.size)
 
@@ -108,7 +108,7 @@ movieRouter.get("/movies", jwtCheck, async(req,res,next) => {
 });
 
 // HOME
-movieRouter.get("/home", jwtCheck, async(req,res,next) => {
+movieRouter.get("/home", cors.cors, jwtCheck, async(req,res,next) => {
   if (req.query.size!=null){
     try {
       var page = parseInt(req.query.page)
@@ -211,7 +211,7 @@ movieRouter.get("/writers", jwtCheck, async(req,res,next) => {
   });
 
  // UPDATE 
-movieRouter.get("/update/:id", jwtCheck, async(req, res ,next) => {
+movieRouter.get("/update/:id", cors.cors, jwtCheck, async(req, res ,next) => {
     try {
       const movie = await movies.db
       .collection("movieDetails")
@@ -224,7 +224,7 @@ movieRouter.get("/update/:id", jwtCheck, async(req, res ,next) => {
         console.log(err)
     } 
   })
-  .post("/update/:id", jwtCheck, async(req, res ,next) => {
+  .post("/update/:id", jwtCheck, cors.cors, async(req, res ,next) => {
     try {
       //console.log(req.body.title)
       const movie = await movies.db
@@ -238,7 +238,7 @@ movieRouter.get("/update/:id", jwtCheck, async(req, res ,next) => {
   });
 
 // SEARCH
-movieRouter.get("/search", jwtCheck, async(req, res, next) => {
+movieRouter.get("/search", cors.cors, jwtCheck, async(req, res, next) => {
   var page = parseInt(req.query.page)
   var size = parseInt(req.query.size)
   if (req.query.all) {
