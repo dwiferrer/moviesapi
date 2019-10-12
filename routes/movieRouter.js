@@ -21,136 +21,94 @@ issuer: 'https://dwightferrer.auth0.com/',
 algorithms: ['RS256']
 });
 
-
-// //  check scopes
-// const checkScopes = jwtAuthz(['update:movies']);
-
-// movieRouter.get('/api/private', jwtCheck, function(req, res) {
-//   //console.log(user.email);
-//   res.json({
-//     message: 'Hello from a private endpoint! You need to be authenticated to see this.'
-//   });
-// });
-
-// movieRouter.get('/api/scoped', jwtCheck, checkScopes, function(req, res) {
-//   res.json({
-//     message: 'Hello from a private endpoint! You need to be authenticated and have a scope of read:messages to see this.'
-//   });
-// });
-
-// // (SYNC)
-// app.use("/actors", (req, res) => {
-//   movies.db
-//   .collection("movieDetails")
-//   .find({director: "Wes Anderson"})
-//   .toArray()
-//   .then(result =>{
-//     res.json(result)
-//   })
-// });
-
-// //MOVIE WITH CORRECT LINK (SYNC)
-// movieRouter.get("/movies1", (req, res, next) => {
-//   const size = 10; // results per page
-//   const page = req.query.page // Page 
-//   mongoose.connection.db
-//   .collection("movieDetails")
-//   .find({})
-//   .sort({ year: -1 })
-//   .skip((size * page) - size)
-//   .limit(size)
-//   .toArray()
-//   .then((movies) => {
-//   var newArray = new Array()
-//   movies.forEach((arrayItem) => {
-//       var poster = arrayItem.poster
-//       var posterLink = poster.split("/")
-//       var image = ("https://" + posterLink[2] + '/' + posterLink[3]+ '/' + posterLink[4] + '/' + posterLink[5])
-//       var image = image
-//       var movieDetails = {
-//          title: arrayItem.title,
-//          poster: image
-//       }
-//       newArray.push(movieDetails)
-//     })
-//     res.json(newArray);
-// }, (err) => next(err))
-// .catch((err) => next(err)); 
-// });
-
 //GET MOVIES with proper link
-movieRouter.get("/movies", cors.cors, jwtCheck, async(req,res,next) => {
-  try {
-    var page = parseInt(req.query.page)
-    var size = parseInt(req.query.size)
+movieRouter.get("/movies", jwtCheck, async(req,res,next) => {
+  var page = parseInt(req.query.page)
+  var size = parseInt(req.query.size)
 
-    const movie =  await movies.db
-     .collection("movieDetails")
-     //.find({}, { projection: { _id: 0, title:1, year: 1, poster: 1 }})
-     .find({})
-     .sort( { title: 1 } ) 
-     .skip((page * size) - size)
-     .limit(size)
-     .toArray();
+  if (req.query.sort === "title") {
+    try {
+      const movie =  await movies.db
+      .collection("movieDetails")
+      //.find({}, { projection: { _id: 0, title:1, year: 1, poster: 1 }})
+      .find({})
+      .sort( { title: 1 } ) 
+      .skip((page * size) - size)
+      .limit(size)
+      .toArray();
 
-    movie.forEach((item) => {
-      if (item.poster!=null)
-        item.poster = item.poster.replace("http://ia.media-imdb.com", "https://m.media-amazon.com")
-    })
+      movie.forEach((item) => {
+        if (item.poster!=null)
+          item.poster = item.poster.replace("http://ia.media-imdb.com", "https://m.media-amazon.com")
+      })
 
-    const moviecount = await movies.db
-    .collection("movieDetails")
-    .find({})
-    .count()
+      const moviecount = await movies.db
+      .collection("movieDetails")
+      .find({})
+      .count()
 
-    // res.json(movie);
-    res.json({movie: movie, count: moviecount})
-  } catch (err){
-    console.log(err)
+      // res.json(movie);
+      res.json({movie: movie, count: moviecount})
+    } catch (err){
+      console.log(err)
+    }
+  } else if (req.query.sort === "year") {
+    try {
+      const movie =  await movies.db
+      .collection("movieDetails")
+      //.find({}, { projection: { _id: 0, title:1, year: 1, poster: 1 }})
+      .find({})
+      .sort( { year: -1 } ) 
+      .skip((page * size) - size)
+      .limit(size)
+      .toArray();
+
+      movie.forEach((item) => {
+        if (item.poster!=null)
+          item.poster = item.poster.replace("http://ia.media-imdb.com", "https://m.media-amazon.com")
+      })
+
+      const moviecount = await movies.db
+      .collection("movieDetails")
+      .find({})
+      .count()
+
+      // res.json(movie);
+      res.json({movie: movie, count: moviecount})
+    } catch (err){
+      console.log(err)
+    }  
+  } else {
+    try {
+      const movie =  await movies.db
+      .collection("movieDetails")
+      //.find({}, { projection: { _id: 0, title:1, year: 1, poster: 1 }})
+      .find({})
+      .sort( { "tomato.rating": -1 } ) 
+      .skip((page * size) - size)
+      .limit(size)
+      .toArray();
+
+      movie.forEach((item) => {
+        if (item.poster!=null)
+          item.poster = item.poster.replace("http://ia.media-imdb.com", "https://m.media-amazon.com")
+      })
+
+      const moviecount = await movies.db
+      .collection("movieDetails")
+      .find({})
+      .count()
+
+      // res.json(movie);
+      res.json({movie: movie, count: moviecount})
+    } catch (err){
+      console.log(err)
+    }
   }   
 });
 
-// //GET MOVIES NOT proper link
-// movieRouter.get("/movies2, async(req,res,next) => {
-//   var pageNo = parseInt(req.query.pageNo)
-//   var size = parseInt(req.query.size)
-//   var query = {}
-
-//   if(pageNo < 0 || pageNo === 0) {
-//         response = {"error" : true,"message" : "invalid page number, should start with 1"};
-//         return res.json(response)
-//   }
-//   query.skip = size * (pageNo - 1)
-//   query.limit = size
-  
-//   const movie =  await movies.db
-//     .collection("movieDetails")
-//     .find({}, { projection: { _id: 0, title:1, year: 1, poster: 1 }})
-//     .sort( { year: -1 } ) 
-//     .skip(query.skip)
-//     .limit(query.limit)
-//     .toArray();
-//     //response = {"error" : false,"message" : movie};
-//     res.json(movie);  
-// });
-
-
-// movieRouter.get("/home", async(req,res,next) => { 
-//   console.log(req.query.page)
-//   try {
-//     const moviecount = await movies.db
-//     .collection("movieDetails")
-//     .find({})
-//     .count()
-
-//     res.json({count: moviecount})  
-//   } catch (err){
-//     console.log(err)
-//   }     
-// });
-
 // HOME
-movieRouter.get("/home", cors.cors, jwtCheck, async(req,res,next) => {
+movieRouter.get("/home", jwtCheck, async(req,res,next) => {
   if (req.query.size!=null){
     try {
       var page = parseInt(req.query.page)
@@ -280,7 +238,7 @@ movieRouter.get("/update/:id", jwtCheck, async(req, res ,next) => {
   });
 
 // SEARCH
-movieRouter.get("/search", cors.cors, jwtCheck, async(req, res, next) => {
+movieRouter.get("/search", jwtCheck, async(req, res, next) => {
   var page = parseInt(req.query.page)
   var size = parseInt(req.query.size)
   if (req.query.all) {
