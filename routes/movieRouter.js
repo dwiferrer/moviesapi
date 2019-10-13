@@ -4,6 +4,8 @@ const ObjectId = require("mongodb").ObjectId;
 const { connection: movies } = mongoose;
 const cors = require("./cors");
 const movieRouter = express.Router();
+
+
 const jwtAuthz = require('express-jwt-authz');
 
 var jwt = require('express-jwt');
@@ -23,14 +25,13 @@ algorithms: ['RS256']
 
 //GET MOVIES with proper link
 movieRouter.get("/movies", cors.cors, jwtCheck, async(req,res,next) => {
-  var page = parseInt(req.query.page)
-  var size = parseInt(req.query.size)
+  try {
+    var page = parseInt(req.query.page)
+    var size = parseInt(req.query.size)
 
-  if (req.query.sort === "title") {
-    try {
+    if (req.query.sort === "title") {
       const movie =  await movies.db
       .collection("movieDetails")
-      //.find({}, { projection: { _id: 0, title:1, year: 1, poster: 1 }})
       .find({})
       .sort( { title: 1 } ) 
       .skip((page * size) - size)
@@ -40,23 +41,17 @@ movieRouter.get("/movies", cors.cors, jwtCheck, async(req,res,next) => {
       movie.forEach((item) => {
         if (item.poster!=null)
           item.poster = item.poster.replace("http://ia.media-imdb.com", "https://m.media-amazon.com")
-      })
+        })
 
       const moviecount = await movies.db
       .collection("movieDetails")
       .find({})
       .count()
 
-      // res.json(movie);
       res.json({movie: movie, count: moviecount})
-    } catch (err){
-      console.log(err)
-    }
-  } else if (req.query.sort === "year") {
-    try {
+    } else if (req.query.sort === "year") {
       const movie =  await movies.db
       .collection("movieDetails")
-      //.find({}, { projection: { _id: 0, title:1, year: 1, poster: 1 }})
       .find({})
       .sort( { year: -1 } ) 
       .skip((page * size) - size)
@@ -73,16 +68,10 @@ movieRouter.get("/movies", cors.cors, jwtCheck, async(req,res,next) => {
       .find({})
       .count()
 
-      // res.json(movie);
       res.json({movie: movie, count: moviecount})
-    } catch (err){
-      console.log(err)
-    }  
   } else {
-    try {
       const movie =  await movies.db
       .collection("movieDetails")
-      //.find({}, { projection: { _id: 0, title:1, year: 1, poster: 1 }})
       .find({})
       .sort( { "tomato.rating": -1 } ) 
       .skip((page * size) - size)
@@ -99,23 +88,21 @@ movieRouter.get("/movies", cors.cors, jwtCheck, async(req,res,next) => {
       .find({})
       .count()
 
-      // res.json(movie);
       res.json({movie: movie, count: moviecount})
-    } catch (err){
-      console.log(err)
-    }
-  }   
+  }
+  } catch (err){
+    console.log(err)
+  }       
 });
 
 // HOME
 movieRouter.get("/home", cors.cors, jwtCheck, async(req,res,next) => {
-  if (req.query.size!=null){
-    try {
+  try{
+    if (req.query.size!=null){
       var page = parseInt(req.query.page)
       var size = parseInt(req.query.size)
       const movie =  await movies.db
       .collection("movieDetails")
-      //.find({}, { projection: { _id: 0, title:1, year: 1, poster: 1 }})
       .find({})
       .sort( { "tomato.rating": -1 } ) 
       .skip((page * size) - size)
@@ -132,117 +119,116 @@ movieRouter.get("/home", cors.cors, jwtCheck, async(req,res,next) => {
       .find({})
       .count()
 
-      res.json({movie: movie,
-        count: moviecount})
-      //res.json(movie)  
-    } catch (err){
-      console.log(err)
-    }
-  } else {
-    try {
+      res.json({movie: movie, count: moviecount})  
+    } else {
       const moviecount = await movies.db
       .collection("movieDetails")
       .find({})
       .count()
 
       res.json({count: moviecount})  
-    } catch (err){
-      console.log(err)
-    }     
-
-  }
+     }
+  } catch (err){
+    console.log(err)
+  }     
 });
 
 // GET MOVIE ID
 movieRouter.get("/movies/:id", jwtCheck, async(req,res,next) => {
-    try {
-      const movie = await movies.db
-      .collection("movieDetails")
-      .findOne({ _id: new ObjectId(req.params.id) }) 
-      //{ projection: { _id: 0, title:1, plot: 1, poster: 1 }})     
-      if (movie.poster != null){
-        movie.poster = movie.poster.replace("http://ia.media-imdb.com", "https://m.media-amazon.com")
-      }
-      res.json(movie)
-    } catch (err){
-        console.log(err)
-    } 
-  });
+  try {
+    const movie = await movies.db
+    .collection("movieDetails")
+    .findOne({ _id: new ObjectId(req.params.id) })      
+    
+    if (movie.poster != null){
+      movie.poster = movie.poster.replace("http://ia.media-imdb.com", "https://m.media-amazon.com")
+    }
+
+    res.json(movie)
+  } catch (err){
+    console.log(err)
+  } 
+});
 
 // GET MOVIE ID COUNTRIES
 movieRouter.get("/movies/:id/countries", jwtCheck, async(req,res,next) => {
-    try {
-      const movie = await movies.db
-      .collection("movieDetails")
-      .findOne({ _id: new ObjectId(req.params.id) }, 
+  try {
+    const movie = await movies.db
+    .collection("movieDetails")
+    .findOne({ _id: new ObjectId(req.params.id) }, 
       { projection: { _id: 0, countries: 1 }})
-      res.json(movie)
-    } catch (err){
-        console.log(err)
-    } 
-  }); 
+
+    res.json(movie)
+  } catch (err){
+    console.log(err)
+  } 
+}); 
 
 // GET MOVIE ID WRITERS
 movieRouter.get("/movies/:id/writers", jwtCheck, async(req,res,next) => {
-    try {
-      const movie = await movies.db
-      .collection("movieDetails")
-      .findOne({ _id: new ObjectId(req.params.id) }, 
+  try {
+    const movie = await movies.db
+    .collection("movieDetails")
+    .findOne({ _id: new ObjectId(req.params.id) }, 
       { projection: { _id: 0, writers: 1 }})
-      res.json(movie)
-    } catch (err){
-        console.log(err)
-    } 
-  }); 
+
+    res.json(movie)
+  } catch (err){
+    console.log(err)
+  } 
+}); 
 
 // GET WRITERS
 movieRouter.get("/writers", jwtCheck, async(req,res,next) => {
-    try {
-      console.log(req.query.name)
-      const movie = await movies.db
-      .collection("movieDetails")
-      .find({ writers: new RegExp(req.query.name, "i") }, 
+  try {
+    console.log(req.query.name)
+    const movie = await movies.db
+    .collection("movieDetails")
+    .find({ writers: new RegExp(req.query.name, "i") }, 
       { projection: { _id: 0, title:1, writers: 1 }})
-      .toArray()
-      res.json(movie)
-    } catch (err){
-        console.log(err)
-    } 
-  });
+    .toArray()
+
+    res.json(movie)
+  } catch (err){
+    console.log(err)
+  } 
+});
 
  // UPDATE 
-movieRouter.get("/update/:id", cors.cors, jwtCheck, async(req, res ,next) => {
-    try {
-      const movie = await movies.db
-      .collection("movieDetails")
-      .findOne({ _id: new ObjectId(req.params.id) })
-      if (movie.poster != null){
-        movie.poster = movie.poster.replace("http://ia.media-imdb.com", "https://m.media-amazon.com")
-      }
-      res.json(movie)
-    } catch (err){
-        console.log(err)
-    } 
-  })
-  .post("/update/:id", jwtCheck, cors.cors, async(req, res ,next) => {
-    try {
-      //console.log(req.body.title)
-      const movie = await movies.db
-      .collection("movieDetails")
-      .findOneAndUpdate({ _id: new ObjectId(req.params.id) },
-       {$set: req.body})
-      res.json({update: "success"})
-    } catch (err){
-        console.log(err)
-    } 
-  });
+movieRouter.get("/update/:id", jwtCheck, async(req, res ,next) => {
+  try {
+    const movie = await movies.db
+    .collection("movieDetails")
+    .findOne({ _id: new ObjectId(req.params.id) })
+
+    if (movie.poster != null){
+      movie.poster = movie.poster.replace("http://ia.media-imdb.com", "https://m.media-amazon.com")
+    }
+
+    res.json(movie)
+  } catch (err){
+    console.log(err)
+  } 
+})
+.post("/update/:id", jwtCheck, async(req, res ,next) => {
+  try {
+    const movie = await movies.db
+    .collection("movieDetails")
+    .findOneAndUpdate({ _id: new ObjectId(req.params.id) },
+      {$set: req.body})
+   
+    res.json({update: "success"})
+  } catch (err){
+    console.log(err)
+  } 
+});
 
 // SEARCH
 movieRouter.get("/search", cors.cors, jwtCheck, async(req, res, next) => {
-  var page = parseInt(req.query.page)
-  var size = parseInt(req.query.size)
-  if (req.query.all) {
-    try {
+  try{
+    var page = parseInt(req.query.page)
+    var size = parseInt(req.query.size)
+    if (req.query.all) {
       console.log(req.query.all)
       const movie = await movies.db
       .collection("movieDetails")
@@ -253,18 +239,14 @@ movieRouter.get("/search", cors.cors, jwtCheck, async(req, res, next) => {
       .skip((page * size) - size)
       .limit(size)  
       .toArray();
+
       movie.forEach((item) => {
         if (item.poster!=null)
           item.poster = item.poster.replace("http://ia.media-imdb.com", "https://m.media-amazon.com")
       })
-      //res.json(movie)
+
       res.json({movie: movie, count: movie.length})
-    } catch(err){
-      console.log(err)
-    }  
-  } 
-  else if (req.query.title){
-    try {
+    } else if (req.query.title){
       console.log(req.query.title)
       const movie = await movies.db
       .collection("movieDetails")
@@ -273,18 +255,14 @@ movieRouter.get("/search", cors.cors, jwtCheck, async(req, res, next) => {
       .skip((page * size) - size)
       .limit(size)  
       .toArray();
+
       movie.forEach((item) => {
         if (item.poster!=null)
           item.poster = item.poster.replace("http://ia.media-imdb.com", "https://m.media-amazon.com")
       })
-      //res.json(movie)
+
       res.json({movie: movie, count: movie.length})
-    } catch(err){
-      console.log(err)
-    }  
-  }
-  else if (req.query.actors){
-    try {
+    } else if (req.query.actors){
       console.log(req.query.actors)
       const movie = await movies.db
       .collection("movieDetails")
@@ -293,18 +271,14 @@ movieRouter.get("/search", cors.cors, jwtCheck, async(req, res, next) => {
       .skip((page * size) - size)
       .limit(size)  
       .toArray();
+
       movie.forEach((item) => {
         if (item.poster!=null)
-          item.poster = item.poster.replace("http://ia.media-imdb.com", "https://m.media-amazon.com")
+        item.poster = item.poster.replace("http://ia.media-imdb.com", "https://m.media-amazon.com")
       })
-      //res.json(movie)
+
       res.json({movie: movie, count: movie.length})
-    } catch(err){
-      console.log(err)
-    }  
-  }
-  else if (req.query.plot){
-    try {
+    } else if (req.query.plot){
       console.log(req.query.plot)
       const movie = await movies.db
       .collection("movieDetails")
@@ -313,29 +287,30 @@ movieRouter.get("/search", cors.cors, jwtCheck, async(req, res, next) => {
       .skip((page * size) - size)
       .limit(size)  
       .toArray();
+
       movie.forEach((item) => {
         if (item.poster!=null)
           item.poster = item.poster.replace("http://ia.media-imdb.com", "https://m.media-amazon.com")
       })
-      //res.json(movie)
-      res.json({movie: movie, count: movie.length})
-    } catch(err){
-      console.log(err)
-    }  
-  }
+
+      res.json({movie: movie, count: movie.length}) 
+    }
+  } catch (err){
+    console.log(err)
+  }  
 });     
 
  //DELETE 
-  movieRouter.post("/delete/:id", jwtCheck, async(req,res,next) => {
-    try {
-      const movie = await movies.db
-      .collection("movieDetails")
-      .findOneAndDelete({ _id: new ObjectId(req.params.id) })
-      res.json({
-        deletion: "success" })
-    } catch (err){
-        console.log(err)
-    } 
-  });
+movieRouter.post("/delete/:id", cors.cors, jwtCheck, async(req,res,next) => {
+  try {
+    const movie = await movies.db
+    .collection("movieDetails")
+    .findOneAndDelete({ _id: new ObjectId(req.params.id) })
+    
+    res.json({deletion: "success" })
+  } catch (err){
+    console.log(err)
+  } 
+});
 
 module.exports = movieRouter; 
