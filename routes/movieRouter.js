@@ -301,7 +301,7 @@ movieRouter.get("/search", cors.cors, jwtCheck, async(req, res, next) => {
 });     
 
  //DELETE 
-movieRouter.post("/delete/:id", cors.cors, jwtCheck, async(req,res,next) => {
+movieRouter.post("/delete/:id", cors.cors, async(req,res,next) => {
   try {
     const movie = await movies.db
     .collection("movieDetails")
